@@ -35,7 +35,7 @@ const (
 
 const NCCS = 32
 
-type termios struct {
+type Termios struct {
 	c_iflag, c_oflag, c_cflag, c_lflag tcflag_t
 	c_line                             cc_t
 	c_cc                               [NCCS]cc_t
@@ -49,11 +49,10 @@ const (
 )
 
 var (
-	orig_termios termios
-	ttyfd        int = 0 // STDIN_FILENO
+	ttyfd int = 0 // STDIN_FILENO
 )
 
-func GetTermios(dst *termios) error {
+func GetTermios(dst *Termios) error {
 	r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(ttyfd), uintptr(TCGETS),
 		uintptr(unsafe.Pointer(dst)))
@@ -69,7 +68,7 @@ func GetTermios(dst *termios) error {
 	return nil
 }
 
-func SetTermios(src *termios) error {
+func SetTermios(src *Termios) error {
 	r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(ttyfd), uintptr(TCSETS),
 		uintptr(unsafe.Pointer(src)))
@@ -85,7 +84,7 @@ func SetTermios(src *termios) error {
 	return nil
 }
 
-func Tty_raw() error {
+func Tty_raw(orig_termios Termios) error {
 	raw := orig_termios
 
 	raw.c_iflag &= ^(BRKINT | ICRNL | INPCK | ISTRIP | IXON)
