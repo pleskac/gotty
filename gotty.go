@@ -1,3 +1,5 @@
+// Based on Ostsol found at https://groups.google.com/forum/#!topic/golang-nuts/8o9fxPaeFu8
+
 package gotty
 
 import (
