@@ -1,9 +1,10 @@
 package gotty
 
 import (
-	"fmt"
+	"errors"
+	_ "fmt"
 	"os"
-	"strings"
+	_ "strings"
 	"syscall"
 	"unsafe"
 )
@@ -50,39 +51,39 @@ var (
 	ttyfd        int = 0 // STDIN_FILENO
 )
 
-func GetTermios(dst *termios) os.Error {
+func GetTermios(dst *termios) error {
 	r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(ttyfd), uintptr(TCGETS),
 		uintptr(unsafe.Pointer(dst)))
 
-	if err := os.NewSyscallError("SYS_IOCTL", int(errno)); err != nil {
+	if err := os.NewSyscallError("SYS_IOCTL", errno); err != nil {
 		return err
 	}
 
 	if r1 != 0 {
-		return os.ErrorString("Error")
+		return errors.New("Error")
 	}
 
 	return nil
 }
 
-func SetTermios(src *termios) os.Error {
+func SetTermios(src *termios) error {
 	r1, _, errno := syscall.Syscall(syscall.SYS_IOCTL,
 		uintptr(ttyfd), uintptr(TCSETS),
 		uintptr(unsafe.Pointer(src)))
 
-	if err := os.NewSyscallError("SYS_IOCTL", int(errno)); err != nil {
+	if err := os.NewSyscallError("SYS_IOCTL", errno); err != nil {
 		return err
 	}
 
 	if r1 != 0 {
-		return os.ErrorString("Error")
+		return errors.New("Error occured")
 	}
 
 	return nil
 }
 
-func Tty_raw() os.Error {
+func Tty_raw() error {
 	raw := orig_termios
 
 	raw.c_iflag &= ^(BRKINT | ICRNL | INPCK | ISTRIP | IXON)
@@ -93,19 +94,20 @@ func Tty_raw() os.Error {
 	raw.c_cc[VMIN] = 1
 	raw.c_cc[VTIME] = 0
 
-	if err := setTermios(&raw); err != nil {
+	if err := SetTermios(&raw); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func ScreenIO() (err os.Error) {
+func ScreenIO() (err error) {
 	var (
-		bytesread, errno int
-		c_in, c_out      [1]byte
-		up               []byte = strings.Bytes("\033[A")
-		eightbitchars    [256]byte
+		errno         error
+		bytesread     int
+		c_in, c_out   [1]byte
+		up            []byte = []byte("\033[A")
+		eightbitchars [256]byte
 	)
 
 	for i := range eightbitchars {
@@ -117,7 +119,7 @@ func ScreenIO() (err os.Error) {
 		if err = os.NewSyscallError("SYS_READ", errno); err != nil {
 			return
 		} else if bytesread < 0 {
-			return os.ErrorString("read error")
+			return errors.New("read error")
 		}
 
 		if bytesread == 0 {
@@ -131,7 +133,7 @@ func ScreenIO() (err os.Error) {
 			case 'q':
 				return nil
 			case 'z':
-				_, errno = syscall.Write(ttyfd, [1]byte{'Z'}[0:])
+				_, errno = syscall.Write(ttyfd, []byte{'Z'})
 				if err = os.NewSyscallError("SYS_WRITE", errno); err != nil {
 					return nil
 				}
